@@ -39,7 +39,7 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v19</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v20</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="tabs"><button id="tabCreate" class="active">Créer une fiche</button><button id="tabScan" class="secondary">Lire mes fiches</button></div>
 
@@ -47,7 +47,7 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <h2>Créer une fiche OMR</h2>
 <label>Titre<input id="title" value="Fiche d'observation EPS"></label><br><br>
 <label>Classe / groupe<input id="classe" placeholder="Ex. 3e1"></label><br><br>
-<label>Équipe / élève<input id="groupeEleve" placeholder="Ex. Équipe bleue, Léa..."></label>
+<label>Équipes / élèves</label><textarea id="groupeEleve" rows="5" placeholder="Une identité par ligne. Ex. :&#10;Équipe Jaune&#10;Équipe Rouge&#10;Équipe Bleue"></textarea><p class="small">Une ligne = une fiche. Une seule ligne génère une seule fiche.</p>
 <h3>Indicateurs</h3><div id="rows"></div>
 <button id="add" class="secondary">+ Ajouter un indicateur</button>
 <div class="ratio-builder">
@@ -116,7 +116,7 @@ function ratioValue(r,ra,c){
  return {n,d,pct:d>0?Math.max(0,Math.min(100,n/d*100)):null};
 }
 
-function config(){return {version:2,title:$("#title").value||"Fiche OMR EPS",classe:$("#classe").value,groupeEleve:$("#groupeEleve").value,rows:rows.map((r,i)=>({...r,key:"ligne_"+(i+1),y:YS[i]})),ratios:ratios.map(r=>({...r})),markers:[[14,14],[196,14],[14,283],[196,283]],x0:X0,box:BOX,gap:GAP}}
+function config(){return {version:2,title:$("#title").value||"Fiche OMR EPS",classe:$("#classe").value,groupeEleve:$("#groupeEleve").value,identities:$("#groupeEleve").value.split(/\n+/).map(v=>v.trim()).filter(Boolean),rows:rows.map((r,i)=>({...r,key:"ligne_"+(i+1),y:YS[i]})),ratios:ratios.map(r=>({...r})),markers:[[14,14],[196,14],[14,283],[196,283]],x0:X0,box:BOX,gap:GAP}}
 function saveConfig(){localStorage.setItem("omr_eps_config",JSON.stringify(config()));summary()}
 function loadConfig(){try{let c=JSON.parse(localStorage.getItem("omr_eps_config"));if(c){$("#title").value=c.title;$("#classe").value=c.classe||"";$("#groupeEleve").value=c.groupeEleve||"";rows=c.rows.map(r=>({label:r.label,boxes:r.boxes}));ratios=(c.ratios||[]).map(r=>({label:r.label||"",num:+r.num||0,den:+r.den||0}))}}catch(e){}renderRows();renderRatios();summary()}
 function summary(){let c=config();$("#configSummary").innerHTML="<b>Fiche active :</b> "+safe(c.title)+"<br>"+c.rows.map(r=>`${safe(r.label)} (${r.boxes})`).join(" · ")+(c.ratios.length?`<br><b>Ratios :</b> ${c.ratios.map(r=>safe(ratioLabel(r,c))).join(" · ")}`:"")}
@@ -127,28 +127,25 @@ function tabs(which){$("#create").classList.toggle("hidden",which!=="create");$(
 $("#tabCreate").onclick=()=>tabs("create");$("#tabScan").onclick=()=>tabs("scan");
 
 $("#pdf").onclick=async()=>{
- saveConfig();const c=config();const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"a4"});
- d.setFillColor(0);c.markers.forEach(([x,y])=>d.rect(x-3,y-3,6,6,"F"));
- d.setFont("helvetica","bold");d.setFontSize(16);d.text(c.title,105,30,{align:"center"});
- d.setFont("helvetica","normal");d.setFontSize(10);if(c.classe)d.text("Classe / groupe : "+c.classe,22,44);
- d.text("Equipe / eleve : "+(c.groupeEleve ? c.groupeEleve : "______________________________"),22,51);
- if(c.groupeEleve){
-  try{
-   if(typeof QRious==="undefined")throw Error("moteur QR non chargé");
-   let qr=new QRious({value:String(c.groupeEleve).trim(),size:320,level:"M",padding:16});
-   d.addImage(qr.toDataURL("image/png"),"PNG",158,32,34,34);
-  }catch(e){
-   console.error("QR PDF",e);
-   alert("Erreur QR : "+(e&&e.message?e.message:String(e)));
-   return;
+ saveConfig();const c=config();const ids=(c.identities&&c.identities.length?c.identities:[""]);const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"a4"});
+ for(let page=0;page<ids.length;page++){
+  if(page>0)d.addPage();const identity=ids[page];
+  d.setFillColor(0);c.markers.forEach(([x,y])=>d.rect(x-3,y-3,6,6,"F"));
+  d.setFont("helvetica","bold");d.setFontSize(16);d.text(c.title,105,30,{align:"center"});
+  d.setFont("helvetica","normal");d.setFontSize(10);if(c.classe)d.text("Classe / groupe : "+c.classe,22,44);
+  d.text("Equipe / eleve : "+(identity||"______________________________"),22,51);
+  if(identity){
+   try{
+    if(typeof QRious==="undefined")throw Error("moteur QR non chargé");
+    let qr=new QRious({value:String(identity).trim(),size:320,level:"M",padding:16});
+    d.addImage(qr.toDataURL("image/png"),"PNG",158,32,34,34);
+   }catch(e){console.error("QR PDF",e);alert("Erreur QR : "+(e&&e.message?e.message:String(e)));return}
   }
+  d.setFontSize(8);d.text("Consigne : noircir une case a chaque occurrence observee.",22,59);
+  c.rows.forEach(r=>{d.setFont("helvetica","bold");d.setFontSize(9);d.text(r.label.slice(0,58),22,r.y-2);for(let j=0;j<r.boxes;j++)d.rect(c.x0+j*(c.box+c.gap),r.y+7,c.box,c.box);});
+  d.setFont("helvetica","normal");d.setFontSize(7);d.text("Fiche generee par OMR EPS - conserver les quatre reperes noirs visibles.",22,280);
  }
- d.setFontSize(8);d.text("Consigne : noircir une case a chaque occurrence observee.",22,59);
- c.rows.forEach(r=>{d.setFont("helvetica","bold");d.setFontSize(9);d.text(r.label.slice(0,58),22,r.y-2);
-  for(let j=0;j<r.boxes;j++)d.rect(c.x0+j*(c.box+c.gap),r.y+7,c.box,c.box);
- });
- d.setFont("helvetica","normal");d.setFontSize(7);d.text("Fiche generee par OMR EPS - conserver les quatre reperes noirs visibles.",22,280);
- d.save("fiche_omr_eps.pdf");
+ d.save(ids.length>1?"fiches_omr_eps.pdf":"fiche_omr_eps.pdf");
 };
 
 async function fileMat(file){
@@ -274,4 +271,4 @@ if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }
 if(window.caches){caches.keys().then(function(keys){keys.forEach(function(k){if(k.indexOf("omr-eps-")===0)caches.delete(k)})}).catch(function(){});}
-</script><script src="v8.js?v=19"></script></body></html>
+</script><script src="v8.js?v=20"></script></body></html>

@@ -36,7 +36,7 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v7</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v8</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="tabs"><button id="tabCreate" class="active">Créer une fiche</button><button id="tabScan" class="secondary">Lire mes fiches</button></div>
 
@@ -259,13 +259,13 @@ loadConfig();
 if("serviceWorker" in navigator){
  window.addEventListener("load",async()=>{
   try{
-   const reg=await navigator.serviceWorker.register("./sw.js?v=7",{updateViaCache:"none"});
+   const reg=await navigator.serviceWorker.register("./sw.js?v=8",{updateViaCache:"none"});
    await reg.update();
-   if(!sessionStorage.getItem("omr_v7_reloaded")){
-    sessionStorage.setItem("omr_v7_reloaded","1");
+   if(!sessionStorage.getItem("omr_v8_reloaded")){
+    sessionStorage.setItem("omr_v8_reloaded","1");
     setTimeout(()=>location.reload(),500);
    }
   }catch(e){}
  });
 }
-</script></body></html>
+</script><script src="v8.js?v=8"></script></body></html>

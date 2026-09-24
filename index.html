@@ -9,7 +9,7 @@
 :root{font-family:system-ui,-apple-system,sans-serif;color:#161616;background:#f4f4f4}
 body{margin:0}.wrap{max-width:850px;margin:auto;padding:18px}.card{background:white;border:1px solid #ddd;border-radius:14px;padding:18px;margin:12px 0}
 h1{font-size:28px;margin:8px 0}h2{font-size:20px}button,.btn{font:inherit;border:0;border-radius:10px;padding:12px 16px;background:#111;color:white;cursor:pointer}
-.secondary{background:#e8e8e8;color:#111}.intro{background:#fff;border:1px solid #ddd;border-radius:14px;padding:16px;margin:12px 0}.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}.step{background:#f5f5f5;border-radius:10px;padding:10px;text-align:center;font-size:13px}.help{margin-top:10px}.help summary{cursor:pointer;font-weight:700}.help ol{padding-left:22px}.signature{font-size:13px;color:#555;margin-top:5px}@media(max-width:650px){.steps{grid-template-columns:1fr 1fr}.step:last-child{grid-column:1/-1}}input{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:100%;box-sizing:border-box}
+.secondary{background:#e8e8e8;color:#111}.intro{background:#fff;border:1px solid #ddd;border-radius:14px;padding:16px;margin:12px 0}.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}.step{background:#f5f5f5;border-radius:10px;padding:10px;text-align:center;font-size:13px}.help{margin-top:10px}.help summary{cursor:pointer;font-weight:700}.help ol{padding-left:22px}.signature{font-size:13px;color:#555;margin-top:5px}.siteqr{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid #e5e5e5}.siteqr canvas{width:108px;height:108px;flex:0 0 108px}.siteqr-text{font-size:13px;color:#555}.siteqr-text b{display:block;color:#111;font-size:15px;margin-bottom:4px}@media(max-width:480px){.siteqr{align-items:flex-start}.siteqr canvas{width:92px;height:92px;flex-basis:92px}}@media(max-width:650px){.steps{grid-template-columns:1fr 1fr}.step:last-child{grid-column:1/-1}}input{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:100%;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:1fr 110px 44px;gap:8px;margin:8px 0;align-items:center}.tabs{display:flex;gap:8px}.tabs button.active{outline:3px solid #aaa}
 .small{font-size:13px;color:#555}.hidden{display:none}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:left;white-space:nowrap}.scroll{overflow:auto}
 .status{padding:10px;border-radius:8px;background:#f1f1f1;margin:10px 0}canvas{max-width:100%}
@@ -46,6 +46,7 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
  <b>Comment ça marche ?</b>
  <div class="steps"><div class="step">1. Créer</div><div class="step">2. Imprimer</div><div class="step">3. Observer sur papier</div><div class="step">4. Photographier</div><div class="step">5. Analyser</div></div>
  <details class="help"><summary>Mode d'emploi</summary><ol><li>Créez votre fiche avec vos indicateurs et les équipes ou élèves concernés.</li><li>Générez puis imprimez le PDF. Chaque fiche possède ses repères de lecture et son identification.</li><li>Pendant la séance, noircissez une case à chaque occurrence observée.</li><li>Photographiez la fiche en gardant visibles les quatre carrés noirs.</li><li>Dans « Lire mes fiches », ajoutez les photos puis lancez l'analyse. Les résultats peuvent ensuite être consultés et exportés.</li></ol><p class="small"><b>Confidentialité :</b> l'analyse des photos est effectuée localement dans votre navigateur ; elles ne sont pas envoyées vers un serveur par OMR EPS.</p></details>
+ <div class="siteqr"><canvas id="siteQr"></canvas><div class="siteqr-text"><b>Partager OMR EPS</b>Scannez ce QR code pour ouvrir directement l'application sur un autre téléphone.<br><span style="font-size:11px">nestor-92.github.io/omr-eps/</span></div></div>
 </div>
 <div class="tabs"><button id="tabCreate" class="active">Créer une fiche</button><button id="tabScan" class="secondary">Lire mes fiches</button></div>
 
@@ -273,6 +274,11 @@ $("#pdfResults").onclick=()=>{
  d.save("resultats_omr.pdf");
 };
 loadConfig();
+try{
+ if(typeof QRious!=="undefined"){
+  new QRious({element:document.getElementById("siteQr"),value:"https://nestor-92.github.io/omr-eps/",size:320,level:"M",padding:16});
+ }
+}catch(e){console.error("QR accueil",e)}
 if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }

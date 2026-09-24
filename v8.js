@@ -1,7 +1,7 @@
 (function(){
 "use strict";
-var VERSION="v8";
-var scanRows=[],scanRatios=[];
+var VERSION="v9";
+var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]})}
@@ -43,7 +43,7 @@ async function readOneV8(file,c){
   if(vals.some(function(v){return v>.08&&v<.45}))amb=true;
  });
  src.delete();wr.delete();gray.delete();
- return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,verification:amb?"A_VERIFIER":"OK"};
+ return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,verification:"OK"};
 }
 function ratioName(ra){return (ra.label||"").trim()||((scanRows[ra.num]?scanRows[ra.num].label:"Indicateur")+" / "+(scanRows[ra.den]?scanRows[ra.den].label:"Indicateur"))}
 function ratioVal(r,ra){var n=Number((r.values||[])[ra.num]||0),d=Number((r.values||[])[ra.den]||0);return {n:n,d:d,pct:d>0?Math.max(0,Math.min(100,n/d*100)):null}}
@@ -84,7 +84,7 @@ function renderResultsV8(){
  if(!lastResults.length){q("#results").innerHTML="";return}
  var c=cfg(),html='<div class="result-head"><div><h3 style="margin:0;font-size:24px">Résultats</h3><div class="small">'+lastResults.length+' fiche'+(lastResults.length>1?"s":"")+' analysée'+(lastResults.length>1?"s":"")+'</div></div></div>';
  lastResults.forEach(function(r,idx){
-  html+='<div class="result-card"><div class="result-title">'+esc(c.groupeEleve||("Fiche "+(idx+1)))+'</div><div class="result-meta">'+esc(r.fiche||"Sans nom")+(c.classe?" · "+esc(c.classe):"")+'</div>';
+  html+='<div class="result-card"><div class="result-title">'+esc(sheetNames[idx]||c.groupeEleve||("Fiche "+(idx+1)))+'</div><div class="result-meta">'+esc(r.fiche||"Sans nom")+(c.classe?" · "+esc(c.classe):"")+'</div>';
   if(r.erreur)html+='<div class="warn">⚠ Lecture impossible : '+esc(r.erreur)+'</div>';
   else{
    html+='<div class="section-label">Comptages</div><div class="metrics">';
@@ -104,20 +104,25 @@ function renderResultsV8(){
 async function analyse(){
  if(!window.cvReady||typeof cv==="undefined"||!cv.Mat){alert("Le moteur d'analyse se charge encore. Réessayez dans quelques secondes.");return}
  var fs=Array.from(q("#photos").files);if(!fs.length){alert("Ajoutez au moins une photo.");return}
- saveConfig();var c=cfg();lastResults=[];scanRows=[];scanRatios=[];q("#progress").classList.remove("hidden");q("#exports").classList.add("hidden");q("#analysisTools").classList.add("hidden");q("#results").innerHTML="";
+ saveConfig();var c=cfg();lastResults=[];scanRows=[];scanRatios=[];q("#progress").classList.remove("hidden");q("#exports").classList.add("hidden");q("#analysisTools").classList.add("hidden");q("#results").innerHTML="";sheetNames=[];
  for(var i=0;i<fs.length;i++){
   q("#progress").textContent="Lecture "+(i+1)+"/"+fs.length+" : "+fs[i].name;
   try{
    var r=await readOneV8(fs[i],c);lastResults.push(r);
    if(!scanRows.length){
     scanRows=r.profileRows.map(function(x){return {label:x.label,boxes:x.boxes}});
-    if(r.profile==="basket5")scanRatios=[
+    if(r.profile==="basket5"){
+     var legacyNames=["BLANCHE","VERTE","ROUGE","VIOLET","JAUNE","BLEUE"];
+     var upper=(r.fiche||"").toUpperCase(),found=legacyNames.find(function(n){return upper.indexOf(n)>=0});
+     sheetNames.push(found?("Équipe "+found):("Fiche "+(i+1)));
+     scanRatios=[
      {label:"Tirs / possessions",num:1,den:0},
      {label:"Tirs favorables / tirs",num:2,den:1},
      {label:"Paniers sur tirs favorables / tirs favorables",num:4,den:2}
-    ];
+     ];
+    } else sheetNames.push("Fiche "+(i+1));
    }
-  }catch(e){lastResults.push({fiche:fs[i].name,erreur:e.message,values:[]})}
+  }catch(e){lastResults.push({fiche:fs[i].name,erreur:e.message,values:[]});sheetNames.push("Fiche "+(i+1))}
  }
  q("#progress").textContent="Analyse terminée : "+lastResults.length+" fiche"+(lastResults.length>1?"s":"")+".";
  if(scanRows.length){q("#analysisTools").classList.remove("hidden");renderTools()}
@@ -139,7 +144,7 @@ function exportPDF(){
  header();var y=45;
  lastResults.forEach(function(r,idx){
   var need=24+Math.ceil(scanRows.length/3)*24+Math.ceil(scanRatios.length/2)*36;if(y+need>284){d.addPage();header();y=45}
-  d.setTextColor(25);d.setFont("helvetica","bold");d.setFontSize(13);d.text(clean(c.groupeEleve||("Fiche "+(idx+1))),15,y);d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(105);d.text(clean(r.fiche||""),15,y+5);y+=12;
+  d.setTextColor(25);d.setFont("helvetica","bold");d.setFontSize(13);d.text(clean(sheetNames[idx]||c.groupeEleve||("Fiche "+(idx+1))),15,y);d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(105);d.text(clean(r.fiche||""),15,y+5);y+=12;
   if(r.erreur){d.setTextColor(140,80,0);d.text("Lecture impossible : "+clean(r.erreur),15,y);y+=12;return}
   d.setTextColor(100);d.setFont("helvetica","bold");d.setFontSize(8);d.text("COMPTAGES",15,y);y+=5;
   scanRows.forEach(function(row,i){var col=i%3,rr=Math.floor(i/3),x=15+col*61,yy=y+rr*24;d.setFillColor(247);d.roundedRect(x,yy,56,19,2,2,"F");d.setTextColor(90);d.setFont("helvetica","normal");d.setFontSize(7);d.text(clean(row.label).slice(0,29),x+4,yy+6);d.setTextColor(20);d.setFont("helvetica","bold");d.setFontSize(15);d.text(String((r.values||[])[i]||0),x+4,yy+15)});

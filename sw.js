@@ -1,5 +1,5 @@
-const CACHE="omr-eps-v7";
-const LOCAL=["./","./index.html","./manifest.webmanifest"];
+const CACHE="omr-eps-v8";
+const LOCAL=["./","./index.html","./manifest.webmanifest","./v8.js"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(LOCAL).catch(()=>{})));

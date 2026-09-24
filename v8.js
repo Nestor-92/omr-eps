@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v10";
+var VERSION="v11";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -14,29 +14,17 @@ function legacyProfile(){return {name:"basket5",rows:[
  {label:"Paniers sur tirs favorables",boxes:10,top:234}
 ]}}
 function activeProfile(c){return {name:"active",rows:c.rows.map(function(r){return {label:r.label,boxes:r.boxes,top:r.y+7}})}}
-function matCropCanvas(mat,xmm,ymm,wmm,hmm){
- var S=5,x=Math.max(0,Math.round(xmm*S)),y=Math.max(0,Math.round(ymm*S)),w=Math.min(mat.cols-x,Math.round(wmm*S)),h=Math.min(mat.rows-y,Math.round(hmm*S));
- var roi=mat.roi(new cv.Rect(x,y,w,h)),can=document.createElement("canvas");cv.imshow(can,roi);roi.delete();return can;
-}
-function normalizeIdentity(text){
- var raw=String(text||"").replace(/\s+/g," ").trim(),up=raw.toUpperCase();
- var colors=["BLANCHE","BLANC","BLEUE","BLEU","ROUGE","VERTE","VERT","JAUNE","VIOLET","VIOLETTE"];
- var color=colors.find(function(n){return up.indexOf(n)>=0});
- if(color)return "Équipe "+color;
- var m=raw.match(/(?:equipe|équipe|eleve|élève)\s*(?:observee|observée)?\s*[:\-]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' -]{1,35})/i);
- if(m&&m[1])return m[1].trim();
- return raw.length>=2&&raw.length<=45?raw:"";
-}
-async function recognizeIdentity(wr,profile){
- if(typeof Tesseract==="undefined")return "";
+function decodeQR(src){
  try{
-  // Ancien basket : identité au centre de l'en-tête. Fiche générique : ligne "Equipe / eleve".
-  var can=profile==="basket5"?matCropCanvas(wr,66,36,83,16):matCropCanvas(wr,18,43,150,14);
-  var out=await Tesseract.recognize(can,"fra+eng",{logger:function(){}});
-  return normalizeIdentity(out&&out.data?out.data.text:"");
+  if(typeof jsQR==="undefined")return "";
+  var can=document.createElement("canvas"),ctx=can.getContext("2d"),max=1400,scale=Math.min(1,max/Math.max(src.cols,src.rows));
+  can.width=Math.max(1,Math.round(src.cols*scale));can.height=Math.max(1,Math.round(src.rows*scale));
+  var tmp=new cv.Mat();cv.resize(src,tmp,new cv.Size(can.width,can.height),0,0,cv.INTER_AREA);cv.imshow(can,tmp);tmp.delete();
+  var im=ctx.getImageData(0,0,can.width,can.height),code=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});
+  if(!code||!code.data)return "";
+  try{var obj=JSON.parse(code.data);return String(obj.identity||obj.nom||obj.name||"").trim()}catch(e){return String(code.data).trim()}
  }catch(e){return ""}
 }
-
 function borderInk(gray,top,n,c){
  var S=5,take=Math.min(n,10),total=0,count=0;
  for(var j=0;j<take;j++){
@@ -64,19 +52,23 @@ async function readOneV8(file,c){
   values.push(vals.filter(function(v){return v>.18}).length);
   if(vals.some(function(v){return v>.08&&v<.45}))amb=true;
  });
- var identity=await recognizeIdentity(wr,profile.name);src.delete();wr.delete();gray.delete();
+ var identity=decodeQR(src);src.delete();wr.delete();gray.delete();
  return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,identity:identity,verification:"OK"};
 }
 function ratioName(ra){return (ra.label||"").trim()||((scanRows[ra.num]?scanRows[ra.num].label:"Indicateur")+" / "+(scanRows[ra.den]?scanRows[ra.den].label:"Indicateur"))}
 function ratioVal(r,ra){var n=Number((r.values||[])[ra.num]||0),d=Number((r.values||[])[ra.den]||0);return {n:n,d:d,pct:d>0?Math.max(0,Math.min(100,n/d*100)):null}}
 
+
+function makeQRData(identity){
+ return JSON.stringify({app:"OMR-EPS",v:1,identity:String(identity||"").trim()});
+}
 function ensureUI(){
  var badge=document.querySelector("h1 + span");if(badge)badge.textContent=VERSION;
  var old=document.querySelector("#create .ratio-builder");if(old)old.remove();
  var progress=q("#progress");
  if(progress&&!q("#analysisTools")){
   var box=document.createElement("div");box.id="analysisTools";box.className="card hidden";box.style.cssText="background:#fafafa;margin-top:16px";
-  box.innerHTML='<h3 style="margin-top:0">Personnaliser les résultats</h3><p class="small">Les indicateurs détectés apparaissent ci-dessous. Vous pouvez corriger leur nom puis créer les ratios à afficher en pourcentage.</p><div class="section-label">Fiches reconnues automatiquement</div><div id="sheetNamesEditor"></div><div class="section-label">Nom des indicateurs</div><div id="resultLabels"></div><div class="section-label">Ratios / pourcentages</div><div id="scanRatios"></div><button id="addScanRatio" class="secondary">+ Ajouter un ratio / pourcentage</button>';
+  box.innerHTML='<h3 style="margin-top:0">Personnaliser les résultats</h3><p class="small">Les indicateurs détectés apparaissent ci-dessous. Vous pouvez corriger leur nom puis créer les ratios à afficher en pourcentage.</p><div class="section-label">Identité lue par QR code</div><div id="sheetNamesEditor"></div><div class="section-label">Nom des indicateurs</div><div id="resultLabels"></div><div class="section-label">Ratios / pourcentages</div><div id="scanRatios"></div><button id="addScanRatio" class="secondary">+ Ajouter un ratio / pourcentage</button>';
   progress.parentNode.insertBefore(box,q("#results"));
  }
  q("#addScanRatio").onclick=function(){

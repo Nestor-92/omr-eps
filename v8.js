@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v16";
+var VERSION="v17";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -17,12 +17,27 @@ function activeProfile(c){return {name:"active",rows:c.rows.map(function(r){retu
 function decodeQR(src){
  try{
   if(typeof jsQR==="undefined")return "";
-  var can=document.createElement("canvas"),ctx=can.getContext("2d"),max=1400,scale=Math.min(1,max/Math.max(src.cols,src.rows));
-  can.width=Math.max(1,Math.round(src.cols*scale));can.height=Math.max(1,Math.round(src.rows*scale));
-  var tmp=new cv.Mat();cv.resize(src,tmp,new cv.Size(can.width,can.height),0,0,cv.INTER_AREA);cv.imshow(can,tmp);tmp.delete();
-  var im=ctx.getImageData(0,0,can.width,can.height),code=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});
-  if(!code||!code.data)return "";
-  try{var obj=JSON.parse(code.data);return String(obj.identity||obj.nom||obj.name||"").trim()}catch(e){return String(code.data).trim()}
+  var scales=[1,1.5,2],attempts=[];
+  // QR des nouvelles fiches : zone supérieure droite après redressement.
+  if(src.cols/src.rows>0.65&&src.cols/src.rows<0.8){
+   var x=Math.round(src.cols*.70),y=Math.round(src.rows*.10),w=Math.round(src.cols*.27),h=Math.round(src.rows*.25);
+   if(x+w<=src.cols&&y+h<=src.rows)attempts.push(src.roi(new cv.Rect(x,y,w,h)));
+  }
+  attempts.push(src);
+  for(var a=0;a<attempts.length;a++){
+   for(var si=0;si<scales.length;si++){
+    var base=attempts[a],scale=scales[si],tmp=new cv.Mat();
+    cv.resize(base,tmp,new cv.Size(Math.round(base.cols*scale),Math.round(base.rows*scale)),0,0,scale>1?cv.INTER_CUBIC:cv.INTER_AREA);
+    var can=document.createElement("canvas");cv.imshow(can,tmp);tmp.delete();
+    var ctx=can.getContext("2d"),im=ctx.getImageData(0,0,can.width,can.height);
+    var code=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});
+    if(code&&code.data){
+     attempts.forEach(function(m){if(m!==src)m.delete()});
+     try{var obj=JSON.parse(code.data);return String(obj.identity||obj.nom||obj.name||"").trim()}catch(e){return String(code.data).trim()}
+    }
+   }
+  }
+  attempts.forEach(function(m){if(m!==src)m.delete()});return "";
  }catch(e){return ""}
 }
 function borderInk(gray,top,n,c){

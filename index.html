@@ -39,7 +39,7 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v21</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v21.1</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="signature"><b>Développé par Arthur Annès — 2026</b> · Version expérimentale — © Arthur Annès 2026</div>
 <div class="intro">
@@ -277,4 +277,4 @@ if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }
 if(window.caches){caches.keys().then(function(keys){keys.forEach(function(k){if(k.indexOf("omr-eps-")===0)caches.delete(k)})}).catch(function(){});}
-</script><script src="v8.js?v=21"></script></body></html>
+</script><script src="v8.js?v=21.1"></script></body></html>

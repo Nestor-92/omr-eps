@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v18";
+var VERSION="v19";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -40,6 +40,25 @@ function decodeQR(src){
   attempts.forEach(function(m){if(m!==src)m.delete()});return "";
  }catch(e){return ""}
 }
+async function decodeIdentityOCR(wr){
+ try{
+  if(typeof Tesseract==="undefined")return "";
+  // Ligne standard des nouvelles fiches : "Equipe / eleve : ..."
+  var S=5,x=Math.round(18*S),y=Math.round(43*S),w=Math.round(142*S),h=Math.round(15*S);
+  if(x+w>wr.cols||y+h>wr.rows)return "";
+  var roi=wr.roi(new cv.Rect(x,y,w,h)),big=new cv.Mat();
+  cv.resize(roi,big,new cv.Size(roi.cols*2,roi.rows*2),0,0,cv.INTER_CUBIC);
+  var can=document.createElement("canvas");cv.imshow(can,big);roi.delete();big.delete();
+  var out=await Tesseract.recognize(can,"fra+eng",{logger:function(){}});
+  var raw=String(out&&out.data?out.data.text:"").replace(/\s+/g," ").trim();
+  if(!raw)return "";
+  var m=raw.match(/(?:equipe|équipe|eleve|élève)[^:]*[:\-]?\s*(.+)$/i);
+  var id=(m&&m[1]?m[1]:raw).replace(/^[\s:;|/_-]+|[\s:;|/_-]+$/g,"").trim();
+  if(id.length<2||id.length>60)return "";
+  return id;
+ }catch(e){return ""}
+}
+
 function borderInk(gray,top,n,c){
  var S=5,take=Math.min(n,10),total=0,count=0;
  for(var j=0;j<take;j++){
@@ -67,7 +86,7 @@ async function readOneV8(file,c){
   values.push(vals.filter(function(v){return v>.18}).length);
   if(vals.some(function(v){return v>.08&&v<.45}))amb=true;
  });
- var identity=decodeQR(wr)||decodeQR(src);src.delete();wr.delete();gray.delete();
+ var identity=decodeQR(wr)||decodeQR(src);if(!identity)identity=await decodeIdentityOCR(wr);src.delete();wr.delete();gray.delete();
  return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,identity:identity,verification:"OK"};
 }
 function ratioName(ra){return (ra.label||"").trim()||((scanRows[ra.num]?scanRows[ra.num].label:"Indicateur")+" / "+(scanRows[ra.den]?scanRows[ra.den].label:"Indicateur"))}
@@ -83,7 +102,7 @@ function ensureUI(){
  var progress=q("#progress");
  if(progress&&!q("#analysisTools")){
   var box=document.createElement("div");box.id="analysisTools";box.className="card hidden";box.style.cssText="background:#fafafa;margin-top:16px";
-  box.innerHTML='<h3 style="margin-top:0">Personnaliser les résultats</h3><p class="small">Les indicateurs détectés apparaissent ci-dessous. Vous pouvez corriger leur nom puis créer les ratios à afficher en pourcentage.</p><div class="section-label">Identité lue par QR code</div><div id="sheetNamesEditor"></div><div class="section-label">Nom des indicateurs</div><div id="resultLabels"></div><div class="section-label">Ratios / pourcentages</div><div id="scanRatios"></div><button id="addScanRatio" class="secondary">+ Ajouter un ratio / pourcentage</button>';
+  box.innerHTML='<h3 style="margin-top:0">Personnaliser les résultats</h3><p class="small">Les indicateurs détectés apparaissent ci-dessous. Vous pouvez corriger leur nom puis créer les ratios à afficher en pourcentage.</p><div class="section-label">Identité reconnue (QR puis OCR)</div><div id="sheetNamesEditor"></div><div class="section-label">Nom des indicateurs</div><div id="resultLabels"></div><div class="section-label">Ratios / pourcentages</div><div id="scanRatios"></div><button id="addScanRatio" class="secondary">+ Ajouter un ratio / pourcentage</button>';
   progress.parentNode.insertBefore(box,q("#results"));
  }
  q("#addScanRatio").onclick=function(){

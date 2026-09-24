@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v21";
+var VERSION="v21.1";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -114,13 +114,13 @@ function ensureUI(){
 function renderTools(){
  var names=q("#sheetNamesEditor");names.innerHTML="";
  sheetNames.forEach(function(n,i){var d=document.createElement("div");d.className="grid";d.style.gridTemplateColumns="1fr";d.innerHTML='<input data-sheetname="'+i+'" value="'+esc(n)+'">';names.appendChild(d)});
- names.querySelectorAll("[data-sheetname]").forEach(function(x){x.oninput=function(e){sheetNames[+e.target.dataset.sheetname]=e.target.value||("Fiche "+(+e.target.dataset.sheetname+1));renderResultsV8()}});
+ names.querySelectorAll("[data-sheetname]").forEach(function(x){x.oninput=function(e){sheetNames[+e.target.dataset.sheetname]=e.target.value;renderResultsV8()};x.onchange=function(e){var i=+e.target.dataset.sheetname;if(!sheetNames[i].trim())sheetNames[i]="Fiche "+(i+1);renderTools();renderResultsV8()}});
  var labels=q("#resultLabels");labels.innerHTML="";
  scanRows.forEach(function(r,i){
   var d=document.createElement("div");d.className="grid";d.style.gridTemplateColumns="1fr";
   d.innerHTML='<input data-slabel="'+i+'" value="'+esc(r.label)+'">';labels.appendChild(d);
  });
- labels.querySelectorAll("[data-slabel]").forEach(function(x){x.oninput=function(e){var i=+e.target.dataset.slabel;scanRows[i].label=e.target.value||("Indicateur "+(i+1));renderTools();renderResultsV8()}});
+ labels.querySelectorAll("[data-slabel]").forEach(function(x){x.oninput=function(e){var i=+e.target.dataset.slabel;scanRows[i].label=e.target.value;renderResultsV8()};x.onchange=function(e){var i=+e.target.dataset.slabel;if(!scanRows[i].label.trim())scanRows[i].label="Indicateur "+(i+1);renderTools();renderResultsV8()}});
  var el=q("#scanRatios");el.innerHTML="";
  var opts=scanRows.map(function(r,i){return '<option value="'+i+'">'+esc(r.label||("Indicateur "+(i+1)))+'</option>'}).join("");
  scanRatios.forEach(function(ra,i){

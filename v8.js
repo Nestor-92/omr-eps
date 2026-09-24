@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v21.1";
+var VERSION="v21.2";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -111,16 +111,20 @@ function ensureUI(){
   scanRatios.push({label:"",num:Math.min(1,scanRows.length-1),den:0});renderTools();renderResultsV8();
  };
 }
+function updateResultsTextOnly(){
+ // Ne reconstruit pas les champs pendant la frappe : évite la perte de focus sur mobile.
+ var cards=q("#results");if(cards)cards.dataset.dirty="1";
+}
 function renderTools(){
  var names=q("#sheetNamesEditor");names.innerHTML="";
  sheetNames.forEach(function(n,i){var d=document.createElement("div");d.className="grid";d.style.gridTemplateColumns="1fr";d.innerHTML='<input data-sheetname="'+i+'" value="'+esc(n)+'">';names.appendChild(d)});
- names.querySelectorAll("[data-sheetname]").forEach(function(x){x.oninput=function(e){sheetNames[+e.target.dataset.sheetname]=e.target.value;renderResultsV8()};x.onchange=function(e){var i=+e.target.dataset.sheetname;if(!sheetNames[i].trim())sheetNames[i]="Fiche "+(i+1);renderTools();renderResultsV8()}});
+ names.querySelectorAll("[data-sheetname]").forEach(function(x){x.oninput=function(e){sheetNames[+e.target.dataset.sheetname]=e.target.value;updateResultsTextOnly()};x.onchange=function(e){var i=+e.target.dataset.sheetname;if(!sheetNames[i].trim())sheetNames[i]="Fiche "+(i+1);renderTools();renderResultsV8()}});
  var labels=q("#resultLabels");labels.innerHTML="";
  scanRows.forEach(function(r,i){
   var d=document.createElement("div");d.className="grid";d.style.gridTemplateColumns="1fr";
   d.innerHTML='<input data-slabel="'+i+'" value="'+esc(r.label)+'">';labels.appendChild(d);
  });
- labels.querySelectorAll("[data-slabel]").forEach(function(x){x.oninput=function(e){var i=+e.target.dataset.slabel;scanRows[i].label=e.target.value;renderResultsV8()};x.onchange=function(e){var i=+e.target.dataset.slabel;if(!scanRows[i].label.trim())scanRows[i].label="Indicateur "+(i+1);renderTools();renderResultsV8()}});
+ labels.querySelectorAll("[data-slabel]").forEach(function(x){x.oninput=function(e){var i=+e.target.dataset.slabel;scanRows[i].label=e.target.value;updateResultsTextOnly()};x.onchange=function(e){var i=+e.target.dataset.slabel;if(!scanRows[i].label.trim())scanRows[i].label="Indicateur "+(i+1);renderTools();renderResultsV8()}});
  var el=q("#scanRatios");el.innerHTML="";
  var opts=scanRows.map(function(r,i){return '<option value="'+i+'">'+esc(r.label||("Indicateur "+(i+1)))+'</option>'}).join("");
  scanRatios.forEach(function(ra,i){
@@ -163,14 +167,14 @@ async function analyse(){
    if(!scanRows.length){
     scanRows=r.profileRows.map(function(x){return {label:x.label,boxes:x.boxes}});
     if(r.profile==="basket5"){
-     sheetNames.push(r.identity||("Fiche "+(i+1)));
      scanRatios=[
      {label:"Tirs / possessions",num:1,den:0},
      {label:"Tirs favorables / tirs",num:2,den:1},
      {label:"Paniers sur tirs favorables / tirs favorables",num:4,den:2}
      ];
-    } else sheetNames.push(r.identity||("Fiche "+(i+1)));
+    }
    }
+   sheetNames.push(r.identity||("Fiche "+(i+1)));
   }catch(e){lastResults.push({fiche:fs[i].name,erreur:e.message,values:[]});sheetNames.push("Fiche "+(i+1))}
  }
  q("#progress").textContent="Analyse terminée : "+lastResults.length+" fiche"+(lastResults.length>1?"s":"")+".";

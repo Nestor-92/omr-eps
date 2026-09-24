@@ -125,12 +125,19 @@ $("#addRatio").onclick=()=>{if(ratios.length<4&&rows.length>=2){ratios.push({lab
 function tabs(which){$("#create").classList.toggle("hidden",which!=="create");$("#scan").classList.toggle("hidden",which!=="scan");$("#tabCreate").className=which==="create"?"active":"secondary";$("#tabScan").className=which==="scan"?"active":"secondary"}
 $("#tabCreate").onclick=()=>tabs("create");$("#tabScan").onclick=()=>tabs("scan");
 
-$("#pdf").onclick=()=>{
+$("#pdf").onclick=async()=>{
  saveConfig();const c=config();const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"a4"});
  d.setFillColor(0);c.markers.forEach(([x,y])=>d.rect(x-3,y-3,6,6,"F"));
  d.setFont("helvetica","bold");d.setFontSize(16);d.text(c.title,105,30,{align:"center"});
  d.setFont("helvetica","normal");d.setFontSize(10);if(c.classe)d.text("Classe / groupe : "+c.classe,22,44);
  d.text("Equipe / eleve : "+(c.groupeEleve ? c.groupeEleve : "______________________________"),22,51);
+ if(c.groupeEleve && window.QRCode){
+  try{
+   let qc=document.createElement("canvas");
+   await QRCode.toCanvas(qc,JSON.stringify({app:"OMR-EPS",v:1,identity:c.groupeEleve}),{width:180,margin:1});
+   d.addImage(qc.toDataURL("image/png"),"PNG",166,37,25,25);
+  }catch(e){console.warn("QR non généré",e)}
+ }
  d.setFontSize(8);d.text("Consigne : noircir une case a chaque occurrence observee.",22,59);
  c.rows.forEach(r=>{d.setFont("helvetica","bold");d.setFontSize(9);d.text(r.label.slice(0,58),22,r.y-2);
   for(let j=0;j<r.boxes;j++)d.rect(c.x0+j*(c.box+c.gap),r.y+7,c.box,c.box);

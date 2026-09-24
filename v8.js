@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v15";
+var VERSION="v16";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -46,13 +46,13 @@ function chooseProfile(gray,c){
 }
 async function readOneV8(file,c){
  var src=await fileMat(file),wr=rectify(src,c),gray=new cv.Mat();cv.cvtColor(wr,gray,cv.COLOR_RGBA2GRAY);
- var profile=chooseProfile(gray,c),values=[],amb=false;
+ var profile=activeProfile(c),values=[],amb=false;
  profile.rows.forEach(function(r){
   var vals=[];for(var j=0;j<r.boxes;j++)vals.push(darkness(gray,c.x0+j*(c.box+c.gap),r.top,c.box));
   values.push(vals.filter(function(v){return v>.18}).length);
   if(vals.some(function(v){return v>.08&&v<.45}))amb=true;
  });
- var identity=decodeQR(src);src.delete();wr.delete();gray.delete();
+ var identity=decodeQR(wr)||decodeQR(src);src.delete();wr.delete();gray.delete();
  return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,identity:identity,verification:"OK"};
 }
 function ratioName(ra){return (ra.label||"").trim()||((scanRows[ra.num]?scanRows[ra.num].label:"Indicateur")+" / "+(scanRows[ra.den]?scanRows[ra.den].label:"Indicateur"))}

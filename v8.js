@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="v11.2";
+var VERSION="v12";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}

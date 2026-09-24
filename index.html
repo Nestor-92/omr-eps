@@ -34,11 +34,11 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 </style>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="window.cvReady=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v12</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v13</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="tabs"><button id="tabCreate" class="active">Créer une fiche</button><button id="tabScan" class="secondary">Lire mes fiches</button></div>
 
@@ -133,16 +133,16 @@ $("#pdf").onclick=async()=>{
  d.text("Equipe / eleve : "+(c.groupeEleve ? c.groupeEleve : "______________________________"),22,51);
  if(c.groupeEleve && window.QRCode){
   try{
-   let holder=document.createElement("div");
-   holder.style.cssText="position:fixed;left:-9999px;top:-9999px;width:220px;height:220px;background:white";
-   document.body.appendChild(holder);
-   new QRCode(holder,{text:JSON.stringify({app:"OMR-EPS",v:1,identity:c.groupeEleve}),width:220,height:220,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
-   let qc=holder.querySelector("canvas"),qi=holder.querySelector("img");
-   let data=qc&&qc.width?qc.toDataURL("image/png"):(qi?qi.src:"");
-   if(!data)throw Error("QR vide");
-   d.addImage(data,"PNG",166,35,27,27);
-   holder.remove();
-  }catch(e){console.warn("QR non généré",e);alert("Le QR code n'a pas pu être généré. Rechargez la page puis réessayez.");return}
+   let qc=document.createElement("canvas");
+   await new Promise((resolve,reject)=>{
+    QRCode.toCanvas(qc,JSON.stringify({app:"OMR-EPS",v:1,identity:c.groupeEleve}),{width:220,margin:2,errorCorrectionLevel:"M"},err=>err?reject(err):resolve());
+   });
+   d.addImage(qc.toDataURL("image/png"),"PNG",166,35,27,27);
+  }catch(e){
+   console.error("QR PDF",e);
+   alert("Erreur QR : "+(e&&e.message?e.message:String(e)));
+   return;
+  }
  }
  d.setFontSize(8);d.text("Consigne : noircir une case a chaque occurrence observee.",22,59);
  c.rows.forEach(r=>{d.setFont("helvetica","bold");d.setFontSize(9);d.text(r.label.slice(0,58),22,r.y-2);
@@ -275,4 +275,4 @@ if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }
 if(window.caches){caches.keys().then(function(keys){keys.forEach(function(k){if(k.indexOf("omr-eps-")===0)caches.delete(k)})}).catch(function(){});}
-</script><script src="v8.js?v=12"></script></body></html>
+</script><script src="v8.js?v=13"></script></body></html>

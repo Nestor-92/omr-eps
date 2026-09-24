@@ -34,11 +34,11 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 </style>
 <script async src="https://docs.opencv.org/4.x/opencv.js" onload="window.cvReady=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v13</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v14</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="tabs"><button id="tabCreate" class="active">Créer une fiche</button><button id="tabScan" class="secondary">Lire mes fiches</button></div>
 
@@ -131,13 +131,11 @@ $("#pdf").onclick=async()=>{
  d.setFont("helvetica","bold");d.setFontSize(16);d.text(c.title,105,30,{align:"center"});
  d.setFont("helvetica","normal");d.setFontSize(10);if(c.classe)d.text("Classe / groupe : "+c.classe,22,44);
  d.text("Equipe / eleve : "+(c.groupeEleve ? c.groupeEleve : "______________________________"),22,51);
- if(c.groupeEleve && window.QRCode){
+ if(c.groupeEleve){
   try{
-   let qc=document.createElement("canvas");
-   await new Promise((resolve,reject)=>{
-    QRCode.toCanvas(qc,JSON.stringify({app:"OMR-EPS",v:1,identity:c.groupeEleve}),{width:220,margin:2,errorCorrectionLevel:"M"},err=>err?reject(err):resolve());
-   });
-   d.addImage(qc.toDataURL("image/png"),"PNG",166,35,27,27);
+   if(typeof QRious==="undefined")throw Error("moteur QR non chargé");
+   let qr=new QRious({value:JSON.stringify({app:"OMR-EPS",v:1,identity:c.groupeEleve}),size:260,level:"M",padding:12});
+   d.addImage(qr.toDataURL("image/png"),"PNG",166,35,27,27);
   }catch(e){
    console.error("QR PDF",e);
    alert("Erreur QR : "+(e&&e.message?e.message:String(e)));
@@ -275,4 +273,4 @@ if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }
 if(window.caches){caches.keys().then(function(keys){keys.forEach(function(k){if(k.indexOf("omr-eps-")===0)caches.delete(k)})}).catch(function(){});}
-</script><script src="v8.js?v=13"></script></body></html>
+</script><script src="v8.js?v=14"></script></body></html>

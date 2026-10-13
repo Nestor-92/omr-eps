@@ -37,9 +37,10 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body><div class="wrap">
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v21.2</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h1>OMR EPS</h1><span style="font-size:12px;font-weight:700;background:#111;color:#fff;padding:6px 9px;border-radius:999px">v22 expérimental</span></div>
 <p>Créer une fiche papier, puis lire ses cases cochées depuis des photos. Le traitement des photos se fait dans votre navigateur.</p>
 <div class="signature"><b>Développé par Arthur Annès — 2026</b> · Version expérimentale — © Arthur Annès 2026</div>
 <div class="intro">
@@ -52,6 +53,29 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 
 <section id="create" class="card">
 <h2>Créer une fiche OMR</h2>
+<div class="status"><b>Mode de création</b><select id="sheetMode"><option value="classic">Occurrences (mode historique)</option><option value="chrono">Chronologique (expérimental)</option></select></div>
+<div id="chronoCreate" class="hidden">
+<h3>Fiche chronologique personnalisable</h3>
+<label>Titre <input id="chTitle" value="Course en durée — CA5"></label><br><br>
+<label>Nombre d'étapes <input id="chSteps" type="number" min="1" max="120" value="30"></label><br><br>
+<label>Unité des étapes <input id="chUnit" value="Minute"></label><br><br>
+<label>Catégories de l'indicateur 1 (séparées par des points-virgules)<input id="chCat1" value="À l'heure;En avance;En retard"></label><br><br>
+<label>Catégories de l'indicateur 2<input id="chCat2" value="Régulier;Accélération;Piétinement"></label>
+<p class="small">Une seule case par indicateur et par étape. Laisser vide si non observé (récupération, changement d'allure, etc.). 30 étapes maximum par page (A4).</p>
+<label>Indicateurs manuscrits facultatifs (séparés par un point-virgule, 2 maximum)
+<input id="chHand" placeholder="Ex. % VMA;km/h — ou Effort ressenti;Commentaire" value=""></label>
+<p class="small">Ces colonnes sont libres, à remplir au stylo. Elles ne sont pas lues par l’OMR et ne sont pas exportées comme données numériques. Laisser vide pour la disposition habituelle. Les nouvelles fiches avec colonnes manuscrites utilisent un QR adapté à leur disposition.</p>
+<h3>Élèves et données individuelles</h3>
+<input type="file" id="chImport" accept=".csv,.xlsx,.xls">
+<p class="small">Colonnes attendues : identifiant, nom, prénom, classe, VMA (ou toute autre colonne). Les informations restent dans ce navigateur. Le contenu du QR dépend du mode d’identification choisi ci-dessous.</p>
+<label>Identification dans le QR code
+<select id="chQRIdentity"><option value="id">Pseudonyme — identifiant uniquement (recommandé)</option><option value="name">Nominatif — nom, prénom et classe</option></select></label>
+<p class="small">Le mode nominatif permet de retrouver directement l’élève lors de l’analyse, même sans le classeur Excel. Attention : toute personne scannant le QR peut lire ces informations. Le mode pseudonyme nécessite une correspondance conservée par l’enseignant.</p>
+<div id="chImportStatus" class="status">Aucun fichier importé. Une fiche anonyme sera générée.</div>
+<label>Champ numérique personnalisé (ex. VMA, temps de référence) <input id="chField" value="VMA"></label><br><br>
+<button id="chGenerate">Générer les fiches chronologiques PDF</button>
+</div>
+<div id="classicCreate">
 <label>Titre<input id="title" value="Fiche d'observation EPS"></label><br><br>
 <label>Classe / groupe<input id="classe" placeholder="Ex. 3e1"></label><br><br>
 <label>Équipes / élèves</label><textarea id="groupeEleve" rows="5" placeholder="Une identité par ligne. Ex. :&#10;Équipe Jaune&#10;Équipe Rouge&#10;Équipe Bleue"></textarea><p class="small">Une ligne = une fiche. Une seule ligne génère une seule fiche.</p>
@@ -66,10 +90,23 @@ select{font:inherit;padding:10px;border:1px solid #bbb;border-radius:8px;width:1
 <br>
 <button id="pdf">Générer le PDF</button>
 <p class="small">Maximum : 6 indicateurs, 20 cases par ligne. <b>Les intitulés saisis ici seront repris tels quels dans les résultats et le PDF.</b> La configuration est conservée sur cet appareil.</p>
+</div>
 </section>
 
 <section id="scan" class="card hidden">
 <h2>Lire mes fiches</h2>
+<div id="chronoScan" class="hidden">
+<h3>Lecture chronologique expérimentale</h3>
+<p class="small">Photographier chaque page séparément avec les quatre repères visibles. Importer toutes les pages, même dans le désordre. Les QR codes permettent de les regrouper.</p>
+<p class="small">Importe directement les photographies de tes fiches : le QR code autonome permet de retrouver leur configuration sans générer de nouveau PDF.</p>
+<div id="chConfigStatus" class="status"></div>
+<input id="chPhotos" type="file" accept="image/*" multiple>
+<button id="chAnalyse">Analyser les fiches chronologiques (QR automatique)</button>
+<div id="chProgress" class="status hidden"></div><div id="chResults"></div>
+<button id="chClassCSV" class="secondary hidden">Exporter la synthèse de classe (CSV)</button>
+<button id="chCSV" class="secondary hidden">Exporter le CSV chronologique</button>
+<hr>
+</div>
 <div id="configSummary" class="status"></div>
 <input id="photos" type="file" accept="image/*" multiple>
 <p class="small">Sur téléphone : choisissez une photo existante dans votre photothèque ou vos fichiers, ou utilisez l’appareil photo si votre navigateur le propose.</p>
@@ -283,4 +320,4 @@ if("serviceWorker" in navigator){
  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});
 }
 if(window.caches){caches.keys().then(function(keys){keys.forEach(function(k){if(k.indexOf("omr-eps-")===0)caches.delete(k)})}).catch(function(){});}
-</script><script src="v8.js?v=21.2"></script></body></html>
+</script><script src="v8.js?v=21.2"></script><script src="chrono.js?v=22.8"></script></body></html>

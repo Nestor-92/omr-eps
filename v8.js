@@ -33,7 +33,7 @@ function decodeQR(src){
     var code=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});
     if(code&&code.data){
      attempts.forEach(function(m){if(m!==src)m.delete()});
-     try{var obj=JSON.parse(code.data);if(obj.app==="OMR-EPS"&&obj.v===2){if(!Array.isArray(obj.r)||obj.r.length<1||obj.r.length>8||obj.r.some(function(r){return !Array.isArray(r)||typeof r[0]!=="string"||!Number.isInteger(r[1])||r[1]<1||r[1]>30}))throw Error("Configuration QR invalide");return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:r[0],boxes:r[1],y:91+i*36}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}}}return {identity:String(obj.identity||obj.nom||obj.name||"").trim(),config:null}}catch(e){if(code.data.charAt(0)==="{")throw e;return {identity:String(code.data).trim(),config:null}}
+     try{var obj=JSON.parse(code.data);if(obj.app==="OMR-EPS"&&obj.v===2){if(!Array.isArray(obj.r)||obj.r.length<1||obj.r.length>6||obj.r.some(function(r){return !Array.isArray(r)||typeof r[0]!=="string"||!Number.isInteger(r[1])||r[1]<1||r[1]>30}))throw Error("Configuration QR invalide");return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:r[0],boxes:r[1],y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}}}return {identity:String(obj.identity||obj.nom||obj.name||"").trim(),config:null}}catch(e){if(code.data.charAt(0)==="{")throw e;return {identity:String(code.data).trim(),config:null}}
     }
    }
   }

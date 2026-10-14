@@ -17,7 +17,9 @@ function activeProfile(c){return {name:"active",rows:c.rows.map(function(r){retu
 function decodeQR(src){
  try{
   if(typeof jsQR==="undefined")return "";
-  var scales=[1,1.5,2],attempts=[];
+  var scales=[1,2,3],attempts=[];
+  // Chercher d’abord le QR seul pour éviter que les autres éléments de la fiche gênent jsQR.
+  if(src.cols===1050&&src.rows===1485){attempts.push(src.roi(new cv.Rect(775,145,205,205)));}
   // QR des nouvelles fiches : zone supérieure droite après redressement.
   if(src.cols/src.rows>0.65&&src.cols/src.rows<0.8){
    var x=Math.round(src.cols*.70),y=Math.round(src.rows*.10),w=Math.round(src.cols*.27),h=Math.round(src.rows*.25);
@@ -30,7 +32,8 @@ function decodeQR(src){
     cv.resize(base,tmp,new cv.Size(Math.round(base.cols*scale),Math.round(base.rows*scale)),0,0,scale>1?cv.INTER_CUBIC:cv.INTER_AREA);
     var can=document.createElement("canvas");cv.imshow(can,tmp);tmp.delete();
     var ctx=can.getContext("2d"),im=ctx.getImageData(0,0,can.width,can.height);
-    var code=jsQR(im.data,im.width,im.height,{inversionAttempts:"attemptBoth"});
+    var code=jsQR(im.data,im.width,im.height,{inversionAttempts:"dontInvert"});
+    if(!code){var gray=document.createElement("canvas");gray.width=can.width;gray.height=can.height;var gc=gray.getContext("2d");gc.drawImage(can,0,0);var pix=gc.getImageData(0,0,gray.width,gray.height);for(var k=0;k<pix.data.length;k+=4){var lum=(pix.data[k]*299+pix.data[k+1]*587+pix.data[k+2]*114)/1000;var v=lum<150?0:255;pix.data[k]=pix.data[k+1]=pix.data[k+2]=v;}code=jsQR(pix.data,pix.width,pix.height,{inversionAttempts:"dontInvert"});}
     if(code&&code.data){
      attempts.forEach(function(m){if(m!==src)m.delete()});
      try{var obj=JSON.parse(code.data);if(obj.app==="OMR-EPS"&&obj.v===2){if(!Array.isArray(obj.r)||obj.r.length<1||obj.r.length>6||obj.r.some(function(r){return !Array.isArray(r)||typeof r[0]!=="string"||!Number.isInteger(r[1])||r[1]<1||r[1]>30}))throw Error("Configuration QR invalide");return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:r[0],boxes:r[1],y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}}}return {identity:String(obj.identity||obj.nom||obj.name||"").trim(),config:null}}catch(e){if(code.data.charAt(0)==="{")throw e;return {identity:String(code.data).trim(),config:null}}
@@ -86,8 +89,8 @@ async function readOneV8(file,c){
   values.push(vals.filter(function(v){return v>.18}).length);
   if(vals.some(function(v){return v>.08&&v<.45}))amb=true;
  });
- var identity=qr?qr.identity:"";if(!identity)identity=await decodeIdentityOCR(wr);src.delete();wr.delete();gray.delete();
- return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,identity:identity,qrConfig:qr&&qr.config||null,verification:amb?"A_VERIFIER":"OK"};
+ var identity=qr?qr.identity:"";if(!identity)identity="Identité non reconnue";src.delete();wr.delete();gray.delete();
+ return {fiche:file.name.replace(/\.[^.]+$/,""),values:values,profile:profile.name,profileRows:profile.rows,identity:identity,qrConfig:qr&&qr.config||null,verification:!qr||!qr.config?"QR_NON_VERIFIE":amb?"A_VERIFIER":"OK"};
 }
 function ratioName(ra){return (ra.label||"").trim()||((scanRows[ra.num]?scanRows[ra.num].label:"Indicateur")+" / "+(scanRows[ra.den]?scanRows[ra.den].label:"Indicateur"))}
 function ratioVal(r,ra){var n=Number((r.values||[])[ra.num]||0),d=Number((r.values||[])[ra.den]||0);return {n:n,d:d,pct:d>0?Math.max(0,Math.min(100,n/d*100)):null}}

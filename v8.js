@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="V2.1.5";
+var VERSION="V2.1.6";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -19,7 +19,7 @@ function decodeQR(src){
   if(typeof jsQR==="undefined")return "";
   var scales=[1,2,3],attempts=[];
   // Chercher d’abord le QR seul pour éviter que les autres éléments de la fiche gênent jsQR.
-  if(src.cols===1050&&src.rows===1485){attempts.push(src.roi(new cv.Rect(775,145,205,205)));}
+  if(src.cols>=700&&src.rows>=950&&src.cols/src.rows>.65&&src.cols/src.rows<.8){var f=src.cols/210;var rx=Math.round(148*f),ry=Math.round(29*f),rw=Math.round(48*f),rh=Math.round(48*f);if(rx+rw<=src.cols&&ry+rh<=src.rows)attempts.push(src.roi(new cv.Rect(rx,ry,rw,rh)));}
   // QR des nouvelles fiches : zone supérieure droite après redressement.
   if(src.cols/src.rows>0.65&&src.cols/src.rows<0.8){
    var x=Math.round(src.cols*.70),y=Math.round(src.rows*.10),w=Math.round(src.cols*.27),h=Math.round(src.rows*.25);

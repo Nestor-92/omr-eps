@@ -181,7 +181,7 @@ $("#pdf").onclick=async()=>{
   if(identity){
    try{
     if(typeof QRious==="undefined")throw Error("moteur QR non chargé");
-    let qr=new QRious({value:String(identity).trim(),size:320,level:"M",padding:16});
+    let qr=new QRious({value:JSON.stringify({app:"OMR-EPS",v:2,i:identity,t:c.title,k:c.classe,r:c.rows.map(r=>[r.label,r.boxes]),a:c.ratios.map(r=>[r.label,r.num,r.den])}),size:480,level:"L",padding:12});
     d.addImage(qr.toDataURL("image/png"),"PNG",158,32,34,34);
    }catch(e){console.error("QR PDF",e);alert("Erreur QR : "+(e&&e.message?e.message:String(e)));return}
   }

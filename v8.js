@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="V2.1.8";
+var VERSION="V2.1.9";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -36,7 +36,7 @@ function decodeQR(src){
     if(!code){var gray=document.createElement("canvas");gray.width=can.width;gray.height=can.height;var gc=gray.getContext("2d");gc.drawImage(can,0,0);var pix=gc.getImageData(0,0,gray.width,gray.height);for(var k=0;k<pix.data.length;k+=4){var lum=(pix.data[k]*299+pix.data[k+1]*587+pix.data[k+2]*114)/1000;var v=lum<150?0:255;pix.data[k]=pix.data[k+1]=pix.data[k+2]=v;}code=jsQR(pix.data,pix.width,pix.height,{inversionAttempts:"dontInvert"});}
     if(code&&code.data){
      attempts.forEach(function(m){if(m!==src)m.delete()});
-     try{var obj=JSON.parse(code.data);if(obj.app==="OMR-EPS"&&obj.v===2){if(!Array.isArray(obj.r)||obj.r.length<1||obj.r.length>6||obj.r.some(function(r){return !Array.isArray(r)||typeof r[0]!=="string"||!Number.isInteger(r[1])||r[1]<1||r[1]>30}))throw Error("Configuration QR invalide");return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:r[0],boxes:r[1],y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}}}return {identity:String(obj.identity||obj.nom||obj.name||"").trim(),config:null}}catch(e){if(code.data.charAt(0)==="{")throw e;return {identity:String(code.data).trim(),config:null}}
+     try{var obj=JSON.parse(code.data);if((obj.app==="OMR-EPS"&&obj.v===2)||obj.v===3){if(!Array.isArray(obj.r)||obj.r.length<1||obj.r.length>6||obj.r.some(function(r){return !Array.isArray(r)||typeof r[0]!=="string"||!Number.isInteger(r[1])||r[1]<1||r[1]>30}))throw Error("Configuration QR invalide");return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:r[0],boxes:r[1],y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}}}return {identity:String(obj.identity||obj.nom||obj.name||"").trim(),config:null}}catch(e){if(code.data.charAt(0)==="{")throw e;return {identity:String(code.data).trim(),config:null}}
     }
    }
   }
@@ -53,7 +53,7 @@ async function decodeQRNative(src){
    if(!item.rawValue)continue;
    try{
     var obj=JSON.parse(item.rawValue);
-    if(obj.app==="OMR-EPS"&&obj.v===2&&Array.isArray(obj.r)&&obj.r.length>0&&obj.r.length<=6){
+    if(((obj.app==="OMR-EPS"&&obj.v===2)||obj.v===3)&&Array.isArray(obj.r)&&obj.r.length>0&&obj.r.length<=6){
      return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:String(r[0]),boxes:Number(r[1]),y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}};
     }
     return {identity:String(obj.identity||""),config:null};

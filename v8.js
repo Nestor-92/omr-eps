@@ -1,6 +1,6 @@
 (function(){
 "use strict";
-var VERSION="V2.1.7";
+var VERSION="V2.1.8";
 var scanRows=[],scanRatios=[],sheetNames=[];
 
 function q(s){return document.querySelector(s)}
@@ -43,9 +43,28 @@ function decodeQR(src){
   attempts.forEach(function(m){if(m!==src)m.delete()});return "";
  }catch(e){return null}
 }
+async function decodeQRNative(src){
+ if(typeof BarcodeDetector==="undefined")return null;
+ try{
+  var detector=new BarcodeDetector({formats:["qr_code"]});
+  var canvas=document.createElement("canvas");cv.imshow(canvas,src);
+  var found=await detector.detect(canvas);
+  for(var item of found){
+   if(!item.rawValue)continue;
+   try{
+    var obj=JSON.parse(item.rawValue);
+    if(obj.app==="OMR-EPS"&&obj.v===2&&Array.isArray(obj.r)&&obj.r.length>0&&obj.r.length<=6){
+     return {identity:String(obj.i||""),config:{title:String(obj.t||""),classe:String(obj.k||""),rows:obj.r.map(function(r,i){return {label:String(r[0]),boxes:Number(r[1]),y:78+i*30}}),ratios:(Array.isArray(obj.a)?obj.a:[]).map(function(r){return {label:r[0],num:r[1],den:r[2]}})}};
+    }
+    return {identity:String(obj.identity||""),config:null};
+   }catch(e){return {identity:item.rawValue,config:null}}
+  }
+ }catch(e){console.warn("Détection QR native indisponible",e)}
+ return null;
+}
 async function readOneV8(file,c){
  var src=await fileMat(file),wr=rectify(src,c),gray=new cv.Mat();cv.cvtColor(wr,gray,cv.COLOR_RGBA2GRAY);
- var qr=decodeQR(wr)||decodeQR(src),effective=c;if(qr&&qr.config){effective=Object.assign({},c,{rows:qr.config.rows,ratios:qr.config.ratios,title:qr.config.title,classe:qr.config.classe});}var profile=activeProfile(effective),values=[],amb=false;
+ var qr=await decodeQRNative(wr)||await decodeQRNative(src)||decodeQR(wr)||decodeQR(src),effective=c;if(qr&&qr.config){effective=Object.assign({},c,{rows:qr.config.rows,ratios:qr.config.ratios,title:qr.config.title,classe:qr.config.classe});}var profile=activeProfile(effective),values=[],amb=false;
  profile.rows.forEach(function(r){
   var vals=[];for(var j=0;j<r.boxes;j++)vals.push(darkness(gray,effective.x0+j*(effective.box+effective.gap),r.top,effective.box));
   values.push(vals.filter(function(v){return v>.18}).length);
